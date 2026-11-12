@@ -1,0 +1,18 @@
+# Caminhos que exigem revisor humano no MR, mesmo sem achados.
+# Formato: categoria<TAB>regex estendida (grep -E) aplicada ao caminho do arquivo no diff.
+# Linhas começando com # são ignoradas. Ajuste esta lista quando o time decidir.
+segurança	(^|/)security/
+segurança	/annotation/security/
+banco	src/main/java/br/com/geopixel/model/databaseVersion/
+configuração	(^|/)alvara[^/]*\.txt$
+configuração	src/main/java/br/com/geopixel/service/ServerConfig\.java$
+configuração	src/main/java/br/com/FlowApplication\.java$
+configuração	src/main/resources/application[^/]*\.(properties|ya?ml)$
+CI e deploy	^\.gitlab-ci\.yml$
+CI e deploy	^scripts/
+CI e deploy	(^|/)Dockerfile
+CI e deploy	^docker-compose
+integrações	src/main/java/br/com/geopixel/integracoes/
+integrações	src/main/java/br/com/geopixel/tax/
+dependências	^pom\.xml$
+dependências	^package\.json$
