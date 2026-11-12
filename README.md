@@ -11,6 +11,7 @@ claude-code-review-skill/
 ├── README.md
 ├── fluxo-code-review-final.png
 ├── REVIEW.md                                  → raiz do repo (memória de revisão)
+├── referencia/matt-pocock-code-review/        skill original do Matt (MIT), só referência, não instalar
 └── .claude/
     ├── agents/
     │   ├── revisor-padroes.md                 eixo Padrões (rules, OWASP, REVIEW.md, smells)
@@ -50,8 +51,8 @@ Com o nome `feature-code-review`, a skill não conflita com o `/code-review` nat
 
 | Comando | Quando |
 |---|---|
-| `/feature-code-review` | antes de abrir o MR: revisão completa de `origin/main...HEAD` |
-| `/feature-code-review --delta` | depois de corrigir os achados, ou depois do `git rebase origin/main` (validação final) |
+| `/feature-code-review` | antes de abrir o MR: pergunta para qual branch vai o MR (`main`, `development`…) e revisa `origin/<branch-alvo>...HEAD` |
+| `/feature-code-review --delta` | depois de corrigir os achados, ou depois do rebase com a branch-alvo (validação final). Reaproveita a branch-alvo da primeira rodada |
 | `/feature-code-review --config <alvara.txt> --tests <Classe>` | quando houver teste que sobe banco (repassado ao `verify-slice.sh`) |
 
 Saídas temporárias em `target/feature-code-review/` (já ignorado pelo git):

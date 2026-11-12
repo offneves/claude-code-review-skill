@@ -3,7 +3,7 @@
 ## `target/feature-code-review/achados.md` (trabalho, não vai para o MR)
 
 ```markdown
-<!-- code-review: base=<sha da base> head=<sha do HEAD analisado> rodada=<N> branch=<branch> -->
+<!-- feature-code-review: alvo=<main|development|…> base=origin/<alvo> base_sha=<sha da base> head=<sha do HEAD analisado> rodada=<N> branch=<branch> -->
 # Achados · <branch>
 
 Spec: <caminho | "colada pelo dev" | "não avaliada (sem spec)">
@@ -25,6 +25,10 @@ verify-slice: <OK | FALHAS>
 ## Nits
 - P-07 `Arquivo.java:15`: <achado>
 
+## Resumo
+Padrões: <n> achados, pior: <achado>. Spec: <n> achados, pior: <achado>.
+<!-- Pior achado de cada eixo, sem escolher um vencedor entre os eixos (regra do Matt). -->
+
 ## Histórico de Críticos
 <!-- Todo Crítico de qualquer rodada fica listado aqui, mesmo corrigido. É o que decide o revisor humano. -->
 - P-01 (rodada 1) · corrigido em <sha>
@@ -37,13 +41,13 @@ Só o que o revisor precisa. Sem prosa.
 ### Com revisor
 
 ```markdown
-## /feature-code-review · <branch> · <sha curto> (base origin/main <sha curto>)
+## /feature-code-review · <branch> · <sha curto> → <branch-alvo> (base <sha curto>)
 **Revisor humano: SIM:** <motivos separados por " · ", ex.: teve Crítico · toca databaseVersion/>
 
-| Sev. | Onde | Achado | Status |
-|---|---|---|---|
-| Crítico | `Version451.java:40` | migração apagava alvarás vencidos | corrigido · RV-012 |
-| Importante | `AlvaraService.java:88` | sem timeout na chamada ao SEI | intencional: retry no job |
+| Sev. | Eixo | Onde | Achado | Status |
+|---|---|---|---|---|
+| Crítico | Padrões | `Version451.java:40` | migração apagava alvarás vencidos | corrigido · RV-012 |
+| Importante | Spec | `AlvaraService.java:88` | CA-04 sem timeout na chamada ao SEI | intencional: retry no job |
 
 **Caminhos sensíveis:** `src/main/java/.../databaseVersion/versions/Version451.java`
 **REVIEW.md:** + RV-012 (aprovar no diff)
@@ -56,7 +60,7 @@ A tabela traz **só** os Críticos (de qualquer rodada) e os Importantes que fic
 ### Sem revisor
 
 ```markdown
-## /feature-code-review · <branch> · <sha curto> (base origin/main <sha curto>)
+## /feature-code-review · <branch> · <sha curto> → <branch-alvo> (base <sha curto>)
 **Revisor humano: NÃO:** sem Crítico, sem justificativa pendente, sem caminho sensível
 **Testes:** verify-slice OK · **Spec:** GDF-123, eixo avaliado · Nits: 2
 ```

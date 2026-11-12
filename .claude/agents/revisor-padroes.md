@@ -25,7 +25,7 @@ O prompt traz:
 ## O que reportar
 
 - **(a) Violação de padrão documentado:** cite o arquivo e a regra (ex.: `.claude/rules/backend/java-spring.md § Transações`, `REVIEW.md RV-007`).
-- **(b) Smell da base do Fowler:** nomeie o smell, cite o trecho e marque `(julgamento)`.
+- **(b) Smell da base do Fowler:** a base vem colada no prompt. Rotule como "possível <Smell>", **cite o trecho do diff** e marque `(julgamento)`. A correção é a que a base indica para aquele smell.
 - **Bugs que quebram uma regra escrita.** Exemplos:
   - null não tratado em caminho real;
   - `@Transactional` ausente onde a rule exige;
@@ -40,11 +40,11 @@ O prompt traz:
 
 ## Classificação
 
-Use a régua de `classificacao.md`. Na dúvida, escolha a severidade menor e diga por quê. Separe violação (fato) de julgamento (smell). Problema que o diff não introduziu é **Pré-existente**.
+Use a régua de `classificacao.md`. Na dúvida, escolha a severidade menor e diga por quê. Separe violação (fato) de julgamento: quebra de padrão documentado pode ser dura, smell da base é sempre julgamento, e um padrão documentado do repo vence a base. Problema que o diff não introduziu é **Pré-existente**.
 
 ## Saída
 
-**Até ~400 palavras.** Se não couber, mantenha todos os Críticos e Importantes e só conte os Nits. Um achado por linha, nesta forma:
+**Até ~400 palavras.** Se não couber, mantenha todos os Críticos e Importantes e só conte os Nits. Um achado por linha, agrupado por arquivo quando houver vários no mesmo arquivo, nesta forma:
 
 ```
 [Crítico|Importante|Nit|Pré-existente] `arquivo:linha` — <achado em uma frase>. Regra: <fonte>. Correção: <o que fazer>. [(julgamento)]

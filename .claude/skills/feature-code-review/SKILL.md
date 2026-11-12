@@ -1,7 +1,7 @@
 ---
 name: feature-code-review
 description: Revisão de código local, feita antes de abrir o MR. Roda dois eixos independentes (Padrões e Spec), cada um num agente com contexto limpo, no modelo da skill code-review de Matt Pocock. Gera o relatório curto para a descrição do MR, decide se o MR precisa de revisor humano e alimenta o REVIEW.md. Use quando o usuário pedir /feature-code-review, /feature-code-review --delta ou "revisar antes do MR".
-argument-hint: "[--delta] [--base <ref>] [--spec <caminho>] [--config <alvara.txt>] [--tests <Classe,...>]"
+argument-hint: "[--delta] [--base <ref> (pula a pergunta da branch-alvo)] [--spec <caminho>] [--config <alvara.txt>] [--tests <Classe,...>]"
 ---
 
 # /feature-code-review
@@ -27,33 +27,36 @@ O fluxo completo está em `fluxo-code-review-final.png`, no pacote desta skill.
 
 ## Modos
 
-- **`/feature-code-review`** faz a revisão completa do diff `origin/main...HEAD` e começa a rodada 1.
-- **`/feature-code-review --delta`** é a nova passada depois das correções (Fase 1) ou depois do rebase com a `main` (Fase 3). Ela confere se os achados foram fechados e se o que mudou introduziu problema novo, sem repetir achados. Exige o `target/feature-code-review/achados.md` da rodada anterior; se ele não existir, avise e rode o modo completo.
+- **`/feature-code-review`** pergunta para qual branch vai o MR, faz a revisão completa do diff `origin/<branch-alvo>...HEAD` e começa a rodada 1.
+- **`/feature-code-review --delta`** é a nova passada depois das correções (Fase 1) ou depois do rebase com a branch-alvo (Fase 3). Ela confere se os achados foram fechados e se o que mudou introduziu problema novo, sem repetir achados. Exige o `target/feature-code-review/achados.md` da rodada anterior; se ele não existir, avise e rode o modo completo.
 
-## Passo 1: Verificação
+## Passo 1: Ponto fixo (para qual branch vai o MR?)
 
-Rode o script e leia só o bloco "Resumo":
+1. **Pergunte ao dev:** "Para qual branch vai o MR?" Ofereça as opções que a pipeline aceita: **`main`** e **`development`**. O dev também pode digitar outra. Não pergunte se o dev já passou `--base <ref>`.
+2. A base é `origin/<branch-alvo>`. Tente `git fetch origin <branch-alvo>`; se falhar, siga com a referência local e avise que ela pode estar desatualizada.
+3. Confirme que a base existe com `git rev-parse --verify <base>`. Se não existir, pergunte de novo.
+4. O diff é `git diff <base>...HEAD`, com três pontos, contra o merge-base. Os commits são `git log <base>..HEAD --oneline`.
+5. Se houver arquivo alterado e não commitado (`git status --porcelain`), avise: a revisão cobre só o que está commitado. Pergunte se o dev quer commitar antes.
+6. Diff vazio encerra a revisão.
+
+Grave a branch-alvo e a base no cabeçalho do `achados.md`. Todos os passos seguintes usam essa mesma base: `verify-slice.sh`, os agentes, `caminhos-sensiveis.sh` e o relatório.
+
+**No `--delta`:** **não pergunte de novo.** Leia `alvo`, `base`, `head` e `rodada` no cabeçalho do `achados.md`.
+- Se o `head` anterior for ancestral do `HEAD` (`git merge-base --is-ancestor <head> HEAD`), o diff da rodada é `git diff <head> HEAD`.
+- Se não for, houve rebase. Use o diff completo `<base>...HEAD` e diga aos agentes que é a passada final depois do rebase.
+
+## Passo 2: Verificação
+
+Rode o script com a base do passo 1 e leia só o bloco "Resumo":
 
 ```bash
 mkdir -p target/feature-code-review
-scripts/verify-slice.sh --base origin/main [--config <alvara.txt>] [--tests <Classe,...>] > target/feature-code-review/verify.log 2>&1
+scripts/verify-slice.sh --base <base> [--config <alvara.txt>] [--tests <Classe,...>] > target/feature-code-review/verify.log 2>&1
 ```
 
 Repasse `--config` e `--tests` se o usuário os deu. Se terminar em `FALHAS`, **pare**. Mostre o resumo, peça a correção e não chame os agentes. Checkstyle, cobertura e `data-testid` são do script, e os agentes não repetem essas checagens.
 
 `UnknownHostException` com o host do banco é problema de ambiente, não do código (`.claude/rules/ambiente-testes.md`). Nesse caso, peça um `--config` que aponte para o banco local.
-
-## Passo 2: Ponto fixo
-
-1. Tente `git fetch origin main`. Se falhar, siga com o `origin/main` local e avise que ele pode estar desatualizado.
-2. A base padrão é `origin/main`; `--base <ref>` a substitui. Confirme com `git rev-parse --verify <base>`.
-3. O diff é `git diff <base>...HEAD`, com três pontos, contra o merge-base. Os commits são `git log <base>..HEAD --oneline`.
-4. Se houver arquivo alterado e não commitado (`git status --porcelain`), avise: a revisão cobre só o que está commitado. Pergunte se o dev quer commitar antes.
-5. Diff vazio encerra a revisão.
-
-**No `--delta`:** leia `head` e `rodada` no cabeçalho do `achados.md`.
-- Se o `head` anterior for ancestral do `HEAD` (`git merge-base --is-ancestor <head> HEAD`), o diff da rodada é `git diff <head> HEAD`.
-- Se não for, houve rebase. Use o diff completo `<base>...HEAD` e diga aos agentes que é a passada final depois do rebase.
 
 ## Passo 3: Spec
 
@@ -66,21 +69,27 @@ Procure nesta ordem:
 
 ## Passo 4: Padrões
 
-Monte a lista de arquivos de padrão. O agente lê esses arquivos por conta própria; você só passa os caminhos:
+Monte a lista de **todo arquivo do repo que documenta como o código deve ser escrito**, como na skill do Matt. Sempre entram:
 - `CLAUDE.md` e `.claude/rules/constitution.md`;
 - as rules das áreas tocadas: `.claude/rules/backend/*` se o diff tem `.java`, `.claude/rules/frontend/*` se tem `src/main/webapp/**`;
 - `.claude/rules/seguranca-owasp.md`, sempre;
 - `.claude/skills/padronizacao-codigo/SKILL.md` e `references/`;
-- `REVIEW.md`, que tem prioridade sobre os demais porque veio de erros reais;
-- `references/code-smells.md`.
+- `REVIEW.md`, que tem prioridade sobre os demais porque veio de erros reais.
+
+Procure também outros documentos de padrão na raiz e em `doc/` (ex.: `CODING_STANDARDS.md`, `CONTRIBUTING.md`, `SONAR.md`). Se `CODING_STANDARDS.md` ou `CONTRIBUTING.md` existirem, eles **têm que** estar na lista.
+
+Por cima do que o repo documenta, o eixo Padrões **sempre** leva a **base de smells** de `references/code-smells.md`, que vale mesmo quando o repo não documenta nada. Duas regras a governam:
+- **O repo vence.** Um padrão documentado do repo sempre prevalece; onde ele permite algo que a base apontaria, o smell é suprimido.
+- **Sempre julgamento.** Cada smell é uma heurística rotulada ("possível Feature Envy"), nunca uma violação dura. Assim como nos demais padrões, pule o que o tooling já garante.
 
 ## Passo 5: Agentes
 
-Chame **os dois agentes na mesma mensagem**, para rodarem em paralelo, cada um com contexto limpo. Não passe a eles a conversa com o dev, só o necessário:
+Chame **os dois agentes na mesma mensagem**, em primeiro plano (não em background), para rodarem em paralelo, cada um com contexto limpo. Espere os dois relatórios antes de consolidar. Não passe a eles a conversa com o dev, só o necessário:
 
 - **`revisor-padroes`** recebe:
   - o comando do diff e a lista de commits;
   - a lista de arquivos de padrão do passo 4;
+  - **a base de smells colada por inteiro** no prompt, copiada de `references/code-smells.md`, como manda a skill do Matt. Assim o agente não depende de achar o arquivo;
   - o caminho de `references/classificacao.md`;
   - no `--delta`, os achados abertos e os já tratados da rodada anterior, copiados do `achados.md`.
 - **`revisor-spec`** recebe:
@@ -101,10 +110,19 @@ Se o eixo Spec foi pulado no passo 3, chame só o `revisor-padroes`.
 3. Aplique a **severidade mínima**: se o achado reincide numa entrada de "Regras ativas", a severidade não pode ficar abaixo da registrada nela.
 4. Dê a cada achado um ID estável: `P-01`, `P-02`... para Padrões e `S-01`... para Spec. IDs nunca são reaproveitados entre rodadas.
 5. Grave o `target/feature-code-review/achados.md` com o template de `references/relatorio.md`.
+6. Feche com **uma linha de resumo**: o total de achados por eixo e o pior achado **dentro de cada eixo**. Não escolha um "pior de todos" entre os eixos, porque essa é justamente a reordenação que a separação existe para evitar.
+
+## Por que dois eixos
+
+Uma mudança pode passar num eixo e falhar no outro:
+- código que segue todos os padrões, mas implementa a coisa errada: **Padrões passa, Spec falha**;
+- código que faz exatamente o que o card pediu, mas quebra as convenções do projeto: **Spec passa, Padrões falha**.
+
+Reportar os eixos separados impede que um mascare o outro. A tabela do relatório do MR (passo 10) junta Críticos dos dois eixos só para o revisor achar rápido o que olhar, e cada linha continua dizendo de que eixo veio.
 
 ## Passo 7: Tratamento com o dev
 
-Mostre no chat **só os Críticos e Importantes**, um por linha, e a contagem de Nits e Pré-existentes. Para cada Crítico e Importante, o dev escolhe:
+Mostre no chat **só os Críticos e Importantes**, **agrupados por eixo** (`## Padrões` e `## Spec`), um por linha, mais a linha de resumo do passo 6 e a contagem de Nits e Pré-existentes. Para cada Crítico e Importante, o dev escolhe:
 - **corrigido:** o dev corrige, ou pede que você corrija. Só marque como corrigido depois que houver diff que resolva o achado;
 - **intencional:** exige motivo;
 - **falso positivo:** exige motivo.
